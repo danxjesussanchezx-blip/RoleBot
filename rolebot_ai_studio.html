@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoleBot AI Studio</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background-color: #07090e;
+            color: #f1f5f9;
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.4); }
+        ::-webkit-scrollbar-thumb { background: #8b5cf6; border-radius: 4px; }
+
+        .glass {
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .sidebar {
+            width: 260px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            border-right: 1px solid #1e293b;
+            z-index: 20;
+            background: #090d16;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar { width: 70px; }
+            .sidebar .nav-text, .sidebar .logo-text { display: none; }
+        }
+
+        .nav-btn {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            background: transparent;
+            color: #94a3b8;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.2s;
+            text-align: left;
+        }
+
+        .nav-btn:hover { background: rgba(255, 255, 255, 0.05); color: #f1f5f9; }
+        .nav-btn.active { background: rgba(139, 92, 246, 0.2); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.3); }
+
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+            background: #0b1120;
+        }
+
+        #char-bg-layer {
+            position: absolute;
+            inset: 0;
+            background-size: cover;
+            background-position: center;
+            opacity: 0.12;
+            filter: blur(14px);
+            pointer-events: none;
+            transition: background 0.5s ease;
+        }
+
+        .header {
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #1e293b;
+            z-index: 10;
+        }
+
+        .chat-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            z-index: 10;
+        }
+
+        .msg-wrap { display: flex; align-items: flex-end; gap: 8px; }
+        .msg-wrap.user { justify-content: flex-end; }
+
+        .bubble {
+            max-width: 75%;
+            padding: 14px 18px;
+            border-radius: 18px;
+            font-size: 15px;
+            line-height: 1.5;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .msg-wrap.bot .bubble {
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid #1e293b;
+            color: #e2e8f0;
+            border-bottom-left-radius: 4px;
+        }
+
+        .msg-wrap.user .bubble {
+            background: linear-gradient(135deg, #7c3aed, #4f46e5);
+            color: #ffffff;
+            border-bottom-right-radius: 4px;
+        }
+
+        .action-text { color: #93c5fd; font-style: italic; }
+        .thought-text { color: #a7f3d0; font-style: italic; }
+
+        .cmd-bar {
+            padding: 8px 16px;
+            background: #07090e;
+            border-top: 1px solid #1e293b;
+            font-size: 12px;
+            display: flex;
+            gap: 14px;
+            overflow-x: auto;
+            color: #60a5fa;
+            z-index: 10;
+        }
+        .cmd-item { cursor: pointer; white-space: nowrap; }
+        .cmd-item:hover { text-decoration: underline; }
+
+        .input-bar {
+            padding: 16px;
+            border-top: 1px solid #1e293b;
+            z-index: 10;
+            background: rgba(9, 13, 22, 0.95);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .input-field {
+            flex: 1;
+            background: #07090e;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 12px 16px;
+            color: #fff;
+            font-size: 15px;
+            outline: none;
+            transition: border 0.2s;
+        }
+        .input-field:focus { border-color: #8b5cf6; }
+
+        .btn {
+            padding: 12px 20px;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+            color: white;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+        }
+        .btn-primary:hover { opacity: 0.9; }
+        .btn-secondary { background: #1e293b; color: #cbd5e1; }
+        .btn-secondary:hover { background: #334155; }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 16px;
+            padding: 20px;
+        }
+        .char-card {
+            border-radius: 16px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 12px;
+            cursor: pointer;
+            transition: border 0.2s, transform 0.2s;
+        }
+        .char-card:hover { border-color: #8b5cf6; transform: translateY(-2px); }
+        .char-img {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            border-radius: 12px;
+            background: #1e293b;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal-body {
+            width: 100%;
+            max-width: 480px;
+            border-radius: 20px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .toast {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(139, 92, 246, 0.95);
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            z-index: 200;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            transition: opacity 0.3s;
+        }
+        .hidden { display: none !important; }
+        .icon { width: 20px; height: 20px; fill: currentColor; }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div style="padding: 20px;">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 32px;">
+                <div style="width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, #8b5cf6, #3b82f6); display: flex; align-items: center; justify-content: center; color: white;">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z"/></svg>
+                </div>
+                <span class="logo-text" style="font-weight: 700; font-size: 16px; background: linear-gradient(90deg, #c084fc, #60a5fa); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">RoleBot AI</span>
+            </div>
+
+            <nav style="display: flex; flex-direction: column; gap: 8px;">
+                <button onclick="switchTab('chat')" id="nav-chat" class="nav-btn active">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/></svg>
+                    <span class="nav-text">Chat Roleplay</span>
+                </button>
+                <button onclick="switchTab('cards')" id="nav-cards" class="nav-btn">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+                    <span class="nav-text">Personajes</span>
+                </button>
+                <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+                    <span class="nav-text">Ajustes & Voz</span>
+                </button>
+            </nav>
+        </div>
+        <div id="status-badge" style="padding: 16px; border-top: 1px solid #1e293b; font-size: 11px; color: #34d399; font-weight: 600;">
+            🌐 Modo IA Online (Gemini)
+        </div>
+    </aside>
+
+    <main class="main">
+        <div id="char-bg-layer"></div>
+
+        <!-- CHAT VIEW -->
+        <section id="view-chat" style="display: flex; flex-direction: column; height: 100%; position: relative; z-index: 10;">
+            <header class="header glass">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <img id="header-avatar" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid #8b5cf6;" src="" alt="Avatar">
+                    <div>
+                        <h2 id="header-name" style="font-size: 16px; font-weight: 700; color: #fff;">Personaje</h2>
+                        <p id="header-status" style="font-size: 12px; color: #a78bfa; font-style: italic;">RoleBot Hybrid Engine</p>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button onclick="replayVoice()" class="btn btn-secondary" style="padding: 10px;" title="Repetir Voz">
+                        <svg class="icon" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                    </button>
+                    <button onclick="resetChat()" class="btn btn-secondary" style="padding: 10px;" title="Reiniciar Chat">
+                        <svg class="icon" viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                    </button>
+                </div>
+            </header>
+
+            <div id="chat-box" class="chat-area"></div>
+
+            <div id="cmd-bar" class="cmd-bar hidden">
+                <span class="cmd-item" onclick="insertCmd('/persona ')"><b>/persona</b> [rol]</span>
+                <span class="cmd-item" onclick="insertCmd('/mood ')"><b>/mood</b> [estado]</span>
+                <span class="cmd-item" onclick="insertCmd('/reset')"><b>/reset</b></span>
+            </div>
+
+            <div class="input-bar">
+                <button type="button" onclick="startMic()" id="mic-btn" class="btn btn-secondary" title="Dictado por voz">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
+                </button>
+                <input type="text" id="user-input" oninput="checkCmds(this.value)" onkeydown="handleKey(event)" placeholder="Escribe tu mensaje o (*acción*)..." class="input-field" autocomplete="off">
+                <button type="button" onclick="sendMessage()" class="btn btn-primary">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                </button>
+            </div>
+        </section>
+
+        <!-- CHARACTERS VIEW -->
+        <section id="view-cards" class="hidden" style="flex: 1; overflow-y: auto; padding: 20px; z-index: 10;">
+            <div style="max-width: 900px; margin: 0 auto;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                    <div>
+                        <h1 style="font-size: 20px; font-weight: 700; color: #fff;">Mis Personajes RoleBot</h1>
+                        <p style="font-size: 13px; color: #94a3b8;">Crea o gestiona personajes con soporte de IA online y offline.</p>
+                    </div>
+                    <button onclick="openModal()" class="btn btn-primary">+ Crear Personaje</button>
+                </div>
+                <div id="chars-grid" class="cards-grid"></div>
+            </div>
+        </section>
+
+        <!-- SETTINGS VIEW -->
+        <section id="view-settings" class="hidden" style="flex: 1; overflow-y: auto; padding: 20px; z-index: 10;">
+            <div style="max-width: 500px; margin: 0 auto;" class="glass modal-body">
+                <h2 style="font-size: 18px; font-weight: 700; color: #fff; border-bottom: 1px solid #1e293b; padding-bottom: 10px;">Ajustes de Voz Offline</h2>
+                <div style="display: flex; flex-direction: column; gap: 14px;">
+                    <div>
+                        <label style="font-size: 12px; font-weight: 600; color: #94a3b8;">Voz del Sistema</label>
+                        <select id="voice-select" onchange="saveSettings()" class="input-field" style="width: 100%; margin-top: 6px;"></select>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div>
+                            <label style="font-size: 12px; font-weight: 600; color: #94a3b8;">Velocidad</label>
+                            <input type="range" id="voice-rate" min="0.5" max="1.8" step="0.1" value="1.0" onchange="saveSettings()" style="width: 100%; margin-top: 6px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 12px; font-weight: 600; color: #94a3b8;">Tono (Pitch)</label>
+                            <input type="range" id="voice-pitch" min="0.5" max="1.5" step="0.1" value="1.0" onchange="saveSettings()" style="width: 100%; margin-top: 6px;">
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid #1e293b;">
+                        <span style="font-size: 14px; color: #cbd5e1;">Lectura de voz automática</span>
+                        <input type="checkbox" id="auto-voice" checked onchange="saveSettings()" style="width: 18px; height: 18px;">
+                    </div>
+                    <button onclick="testVoice()" class="btn btn-secondary">Probar Voz</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="toast" class="toast hidden"></div>
+
+    <div id="char-modal" class="modal-overlay hidden">
+        <div class="glass modal-body">
+            <h3 style="font-size: 18px; font-weight: 700; color: #fff;">Nuevo Personaje RoleBot</h3>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <label style="font-size: 11px; font-weight: 700; color: #94a3b8;">NOMBRE</label>
+                <input type="text" id="new-name" class="input-field">
+
+                <label style="font-size: 11px; font-weight: 700; color: #94a3b8;">AVATAR (URL / SVG / Data URI)</label>
+                <input type="text" id="new-avatar" placeholder="data:image/svg+xml..." class="input-field">
+
+                <label style="font-size: 11px; font-weight: 700; color: #94a3b8;">PERSONALIDAD / ROL</label>
+                <textarea id="new-persona" rows="2" class="input-field" style="resize:none;"></textarea>
+
+                <label style="font-size: 11px; font-weight: 700; color: #94a3b8;">MENSAJE INICIAL (*acción* saludo)</label>
+                <textarea id="new-greeting" rows="2" class="input-field" style="resize:none;"></textarea>
+
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <button onclick="closeModal()" class="btn btn-secondary" style="flex:1;">Cancelar</button>
+                    <button onclick="saveCharacter()" class="btn btn-primary" style="flex:1;">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const DEFAULT_AVATARS = [
+            `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 100 100"><rect width="100%" height="100%" fill="%234c1d95"/><circle cx="50" cy="40" r="25" fill="%23a78bfa"/><circle cx="50" cy="90" r="35" fill="%23a78bfa"/><circle cx="42" cy="38" r="3" fill="%23000"/><circle cx="58" cy="38" r="3" fill="%23000"/><path d="M45 48 Q50 53 55 48" stroke="%23000" stroke-width="2" fill="none"/></svg>`,
+            `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 100 100"><rect width="100%" height="100%" fill="%23065f46"/><circle cx="50" cy="40" r="25" fill="%2334d399"/><circle cx="50" cy="90" r="35" fill="%2334d399"/><circle cx="42" cy="38" r="3" fill="%23000"/><circle cx="58" cy="38" r="3" fill="%23000"/><path d="M42 48 Q50 42 58 48" stroke="%23000" stroke-width="2" fill="none"/></svg>`
+        ];
+
+        let characters = JSON.parse(localStorage.getItem('rolebot_chars')) || [
+            {
+                id: '1',
+                name: 'Kael (Demonio Nocturno)',
+                avatar: DEFAULT_AVATARS[0],
+                persona: 'Frío, calculador, misterioso, protector pero desafiante.',
+                greeting: '*se cruza de brazos observándote fijamente desde la penumbra* ¿A qué se debe tu visita a estas horas?'
+            },
+            {
+                id: '2',
+                name: 'Luna (Compañera Alegre)',
+                avatar: DEFAULT_AVATARS[1],
+                persona: 'Cariñosa, expresiva, juguetona, curiosa y leal.',
+                greeting: '*da un pequeño salto de emoción al verte* ¡Hola! Qué bueno que llegaste, te estuvo esperando todo el día.'
+            }
+        ];
+
+        let activeChar = characters[0];
+        let chats = JSON.parse(localStorage.getItem('rolebot_chats')) || {};
+        let synth = window.speechSynthesis;
+        let voices = [];
+        let settings = JSON.parse(localStorage.getItem('rolebot_settings')) || { rate: 1.0, pitch: 1.0, autoPlay: true };
+
+        function updateNetworkStatus() {
+            const badge = document.getElementById('status-badge');
+            const statusText = document.getElementById('header-status');
+            if (navigator.onLine) {
+                if (badge) {
+                    badge.textContent = "🌐 Modo IA Online (Gemini)";
+                    badge.style.color = "#34d399";
+                }
+                if (statusText) statusText.textContent = "RoleBot Gemini Online Active";
+            } else {
+                if (badge) {
+                    badge.textContent = "⚡ Modo Offline Local";
+                    badge.style.color = "#f59e0b";
+                }
+                if (statusText) statusText.textContent = "RoleBot Contexto Local";
+            }
+        }
+
+        window.addEventListener('online', updateNetworkStatus);
+        window.addEventListener('offline', updateNetworkStatus);
+
+        window.onload = () => {
+            initVoices();
+            if (synth && synth.onvoiceschanged !== undefined) synth.onvoiceschanged = initVoices;
+            renderCharacters();
+            selectChar(characters[0].id);
+            updateNetworkStatus();
+        };
+
+        function initVoices() {
+            if (!synth) return;
+            voices = synth.getVoices();
+            const sel = document.getElementById('voice-select');
+            if (!sel) return;
+            sel.innerHTML = '';
+            voices.forEach((v, idx) => {
+                const opt = document.createElement('option');
+                opt.value = idx;
+                opt.textContent = `${v.name} (${v.lang})`;
+                if (v.lang.includes('es')) opt.selected = true;
+                sel.appendChild(opt);
+            });
+        }
+
+        function saveSettings() {
+            settings.rate = parseFloat(document.getElementById('voice-rate').value);
+            settings.pitch = parseFloat(document.getElementById('voice-pitch').value);
+            settings.autoPlay = document.getElementById('auto-voice').checked;
+            localStorage.setItem('rolebot_settings', JSON.stringify(settings));
+        }
+
+        function speak(text) {
+            if (!synth) return;
+            synth.cancel();
+            
+            // Clean action & thought formatting for text-to-speech readability
+            const cleanText = text.replace(/\*.*?\*/g, '').replace(/\(.*?\)/g, '').trim();
+            if (!cleanText) return;
+
+            const utterance = new SpeechSynthesisUtterance(cleanText);
+            const sel = document.getElementById('voice-select');
+            if (sel && voices[sel.value]) utterance.voice = voices[sel.value];
+            utterance.rate = settings.rate || 1.0;
+            utterance.pitch = settings.pitch || 1.0;
+            synth.speak(utterance);
+        }
+
+        function testVoice() {
+            speak(`Hola, soy ${activeChar ? activeChar.name : 'RoleBot'}. Esta es mi voz de prueba.`);
+        }
+
+        function switchTab(tab) {
+            document.getElementById('view-chat').classList.add('hidden');
+            document.getElementById('view-cards').classList.add('hidden');
+            document.getElementById('view-settings').classList.add('hidden');
+
+            document.getElementById('nav-chat').classList.remove('active');
+            document.getElementById('nav-cards').classList.remove('active');
+            document.getElementById('nav-settings').classList.remove('active');
+
+            document.getElementById(`view-${tab}`).classList.remove('hidden');
+            document.getElementById(`nav-${tab}`).classList.add('active');
+        }
+
+        function renderCharacters() {
+            const grid = document.getElementById('chars-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+            characters.forEach(c => {
+                const card = document.createElement('div');
+                card.className = `glass char-card ${c.id === activeChar.id ? 'active' : ''}`;
+                card.onclick = () => { selectChar(c.id); switchTab('chat'); };
+                card.innerHTML = `
+                    <img class="char-img" src="${c.avatar}" alt="${c.name}">
+                    <div>
+                        <h3 style="font-size: 15px; font-weight: 700; color: #fff;">${c.name}</h3>
+                        <p style="font-size: 12px; color: #94a3b8; margin-top: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${c.persona}</p>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function selectChar(id) {
+            activeChar = characters.find(c => c.id === id) || characters[0];
+            document.getElementById('header-name').textContent = activeChar.name;
+            document.getElementById('header-avatar').src = activeChar.avatar;
+            document.getElementById('char-bg-layer').style.backgroundImage = `url('${activeChar.avatar}')`;
+
+            if (!chats[activeChar.id]) {
+                chats[activeChar.id] = [{ sender: 'bot', text: activeChar.greeting }];
+                saveChats();
+            }
+            renderMessages();
+            renderCharacters();
+        }
+
+        function renderMessages() {
+            const box = document.getElementById('chat-box');
+            if (!box) return;
+            box.innerHTML = '';
+            const history = chats[activeChar.id] || [];
+
+            history.forEach(m => {
+                const wrap = document.createElement('div');
+                wrap.className = `msg-wrap ${m.sender}`;
+                
+                let formatted = m.text;
+                // Highlight action text *...*
+                formatted = formatted.replace(/\*(.*?)\*/g, '<span class="action-text">*$1*</span>');
+                // Highlight thought text (...)
+                formatted = formatted.replace(/\((.*?)\)/g, '<span class="thought-text">($1)</span>');
+
+                wrap.innerHTML = `<div class="bubble">${formatted}</div>`;
+                box.appendChild(wrap);
+            });
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function checkCmds(val) {
+            const bar = document.getElementById('cmd-bar');
+            if (val.startsWith('/')) {
+                bar.classList.remove('hidden');
+            } else {
+                bar.classList.add('hidden');
+            }
+        }
+
+        function insertCmd(cmd) {
+            const input = document.getElementById('user-input');
+            input.value = cmd;
+            input.focus();
+        }
+
+        function handleKey(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                sendMessage();
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('user-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            input.value = '';
+            document.getElementById('cmd-bar').classList.add('hidden');
+
+            if (text.startsWith('/')) {
+                execSlash(text);
+                return;
+            }
+
+            chats[activeChar.id].push({ sender: 'user', text });
+            saveChats();
+            renderMessages();
+
+            // Typing indicator
+            const box = document.getElementById('chat-box');
+            const typingWrap = document.createElement('div');
+            typingWrap.id = 'typing-indicator';
+            typingWrap.className = 'msg-wrap bot';
+            typingWrap.innerHTML = `<div class="bubble"><span style="color:#a78bfa; font-style:italic;">*RoleBot está pensando...*</span></div>`;
+            box.appendChild(typingWrap);
+            box.scrollTop = box.scrollHeight;
+
+            let reply = "";
+            if (navigator.onLine) {
+                reply = await fetchGeminiAI(text, activeChar, chats[activeChar.id]);
+            }
+            
+            // If offline or API fails, fall back to offline contextual engine
+            if (!reply) {
+                reply = generateContextualAI(text, activeChar, chats[activeChar.id]);
+            }
+
+            const indicator = document.getElementById('typing-indicator');
+            if (indicator) indicator.remove();
+
+            chats[activeChar.id].push({ sender: 'bot', text: reply });
+            saveChats();
+            renderMessages();
+            if (settings.autoPlay) speak(reply);
+        }
+
+        async function fetchGeminiAI(userInput, char, history) {
+            try {
+                const apiKey = ""; // API key can be set here or injected via system
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+                const systemPrompt = `Eres '${char.name}'. Tu personalidad es: ${char.persona}. 
+Debes responder SIEMPRE manteniendo este personaje y usando formato de Roleplay con asteriscos para acciones (ej. *sonríe*) y paréntesis opcionales para pensamientos. 
+Responde de forma envolvente, conversacional y fluida. Mantiene tus mensajes concisos y naturales.`;
+
+                const contents = history.slice(-10).map(m => ({
+                    role: m.sender === 'user' ? 'user' : 'model',
+                    parts: [{ text: m.text }]
+                }));
+
+                const payload = {
+                    contents: contents,
+                    systemInstruction: {
+                        parts: [{ text: systemPrompt }]
+                    }
+                };
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) return null;
+                const data = await response.json();
+                return data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+            } catch (err) {
+                console.warn("Fallo de API online, pasando a IA local:", err);
+                return null;
+            }
+        }
+
+        function generateContextualAI(userInput, char, history) {
+            const lower = userInput.toLowerCase();
+            const isQuestion = lower.includes('?') || lower.startsWith('qué') || lower.startsWith('cómo') || lower.startsWith('por qué') || lower.startsWith('quién');
+            const userActions = userInput.match(/\*(.*?)\*/g) || [];
+            const cleanText = userInput.replace(/\*.*?\*/g, '').trim();
+
+            let actionPool = [];
+            let dialoguePool = [];
+
+            if (userActions.length > 0) {
+                actionPool = [
+                    `responde a tu movimiento con una mirada intensa y penetrante`,
+                    `reacciona sutilmente ajustando su postura ante tu gesto`,
+                    `te observa con atención mientras evalúa cada detalle de lo que haces`,
+                    `da un paso deliberado respondiendo a tu cercanía`
+                ];
+            } else {
+                actionPool = [
+                    `mira hacia un lado un instante antes de fijar sus ojos en ti`,
+                    `cruza los brazos con elegancia mientras medita tus palabras`,
+                    `mantiene un silencio breve y expectante`,
+                    `inclina ligeramente la cabeza analizando tu tono`
+                ];
+            }
+
+            if (isQuestion) {
+                dialoguePool = [
+                    `Esa es una pregunta profunda... La respuesta no es tan simple como imaginas.`,
+                    `Si realmente quieres saberlo, tendrás que demostrar que estás dispuesto a asumir las consecuencias.`,
+                    `Me sorprende que te lo plantees justo ahora. Las cosas rara vez son blanco o negro.`,
+                    `Depende enteramente de cómo decidas jugar tus cartas a partir de este momento.`
+                ];
+            } else if (lower.includes('te quiero') || lower.includes('amor') || lower.includes('abrazo') || lower.includes('cariño')) {
+                dialoguePool = [
+                    `Vaya... no esperaba esa franqueza de tu parte, aunque debo admitir que me resulta fascinante.`,
+                    `Eres totalmente impredecible cuando actúas así. Sabes exactamente cómo alterar mi compostura.`,
+                    `Supongo que puedo permitirme bajar la guardia un momento contigo... solo un momento.`,
+                    `Ese tipo de gestos tienen un peso especial cuando provienen de ti.`
+                ];
+            } else if (cleanText.length > 25) {
+                dialoguePool = [
+                    `Has dicho bastante, y cada palabra tuya cambia por completo la dirección de nuestra charla.`,
+                    `Analizo cada frase que mencionas. Tienes una forma muy particular y absorbente de ver las cosas.`,
+                    `Me gusta escucharte hablar con esa determinación. Continúa, te estoy prestando toda mi atención.`,
+                    `Es increíble cómo logras transformar la atmósfera del lugar con tan solo hablar.`
+                ];
+            } else {
+                dialoguePool = [
+                    `El silencio entre nosotros a veces dice más que mil palabras, pero prefiero cuando te expresas así.`,
+                    `Cada vez que conversamos, logras atrapar mi interés de una manera distinta.`,
+                    `No bajes la guardia todavía; esto apenas está comenzando a ponerse interesante.`,
+                    `Tus palabras siempre dejan una huella. ¿Qué más planeas hacer ahora?`
+                ];
+            }
+
+            const recentBots = history.filter(m => m.sender === 'bot').slice(-4).map(m => m.text);
+            let selectedDialogue = dialoguePool[Math.floor(Math.random() * dialoguePool.length)];
+            let attempts = 0;
+            while (recentBots.some(b => b.includes(selectedDialogue)) && attempts < 5) {
+                selectedDialogue = dialoguePool[Math.floor(Math.random() * dialoguePool.length)];
+                attempts++;
+            }
+
+            const chosenAction = actionPool[Math.floor(Math.random() * actionPool.length)];
+            const thoughts = [
+                `(esto resulta mucho más estimulante de lo que planeé)`,
+                `(debo mantener la compostura ante lo que acaba de decir)`,
+                `(me pregunto hasta dónde nos llevará esta conexión)`,
+                `(su presencia siempre altera el ritmo de las cosas)`
+            ];
+            const chosenThought = thoughts[Math.floor(Math.random() * thoughts.length)];
+
+            const patterns = [
+                `*${chosenAction}* ${selectedDialogue} ${chosenThought}`,
+                `${chosenThought} *${chosenAction}* ${selectedDialogue}`,
+                `${selectedDialogue} *${chosenAction}*`
+            ];
+            return patterns[Math.floor(Math.random() * patterns.length)];
+        }
+
+        function execSlash(cmd) {
+            const parts = cmd.split(' ');
+            const action = parts[0].toLowerCase();
+            const param = parts.slice(1).join(' ');
+
+            if (action === '/reset') {
+                resetChat();
+            } else if (action === '/persona') {
+                activeChar.persona = param || activeChar.persona;
+                chats[activeChar.id].push({ sender: 'bot', text: `*Actualiza su rol a: ${activeChar.persona}*` });
+                saveChats();
+                renderMessages();
+            } else if (action === '/mood') {
+                chats[activeChar.id].push({ sender: 'bot', text: `*cambia su semblante a un estado ${param || 'neutral'}*` });
+                saveChats();
+                renderMessages();
+            }
+        }
+
+        function replayVoice() {
+            const history = chats[activeChar.id] || [];
+            const last = history.slice().reverse().find(m => m.sender === 'bot');
+            if (last) speak(last.text);
+        }
+
+        function resetChat() {
+            chats[activeChar.id] = [{ sender: 'bot', text: activeChar.greeting }];
+            saveChats();
+            renderMessages();
+        }
+
+        function saveChats() {
+            localStorage.setItem('rolebot_chats', JSON.stringify(chats));
+        }
+
+        function openModal() { document.getElementById('char-modal').classList.remove('hidden'); }
+        function closeModal() { document.getElementById('char-modal').classList.add('hidden'); }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            if (!toast) return;
+            toast.textContent = msg;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+
+        function saveCharacter() {
+            const name = document.getElementById('new-name').value.trim();
+            const persona = document.getElementById('new-persona').value.trim();
+            const greeting = document.getElementById('new-greeting').value.trim();
+            const avatar = document.getElementById('new-avatar').value.trim() || DEFAULT_AVATARS[0];
+
+            if (!name || !persona || !greeting) {
+                showToast("Por favor completa los campos principales.");
+                return;
+            }
+
+            const nc = { id: Date.now().toString(), name, avatar, persona, greeting };
+            characters.push(nc);
+            localStorage.setItem('rolebot_chars', JSON.stringify(characters));
+            renderCharacters();
+            closeModal();
+            selectChar(nc.id);
+            switchTab('chat');
+            showToast("¡Personaje creado con éxito!");
+        }
+
+        function startMic() {
+            const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRec) {
+                showToast("Dictado por voz listo en modo nativo.");
+                return;
+            }
+            try {
+                const rec = new SpeechRec();
+                rec.lang = 'es-ES';
+                const micBtn = document.getElementById('mic-btn');
+                micBtn.style.color = '#ef4444';
+                rec.onresult = (e) => {
+                    document.getElementById('user-input').value = e.results[0][0].transcript;
+                    micBtn.style.color = '';
+                };
+                rec.onerror = rec.onend = () => { micBtn.style.color = ''; };
+                rec.start();
+            } catch (e) { showToast("No se pudo iniciar el dictado."); }
+        }
+    </script>
+</body>
+</html>
